@@ -38,7 +38,10 @@ class main():
         self.margin = float(config['SYSTEM']['margin'])
         self.quoteAssetNotional = float(config['SYSTEM']['quoteAssetNotional'])
         self.line_token = config['SYSTEM']['line_token']
-        self.openOrder = load_json('open_order.json')
+        self.openOrder = list([])
+        load_ord = load_json('open_order.json')
+        for i in load_ord:
+            self.openOrder.append(i)
         
         #time
         self.tm = ''
@@ -89,9 +92,9 @@ class main():
     def get_ticker(self):
         try:
             ticker = self.client.MKTdepth(self.symbol['symbol'])
-            self.symbol['bids'] = round(float(ticker['bids'][0][0]),self.tickPoint)
+            self.symbol['bid'] = round(float(ticker['bids'][0][0]),self.tickPoint)
             self.symbol['bidv'] = round(float(ticker['bids'][0][1]),self.Qtypoint)
-            self.symbol['asks'] = round(float(ticker['asks'][0][0]),self.tickPoint)
+            self.symbol['ask'] = round(float(ticker['asks'][0][0]),self.tickPoint)
             self.symbol['askv'] = round(float(ticker['asks'][0][1]),self.Qtypoint)
             return True
         except:
@@ -99,7 +102,7 @@ class main():
   
     def cal_value(self):
         #cal value[0] in base USDT
-        return round(float(self.balance[self.baseAsset]['amt']) * self.symbol['asks'] ,self.basePrecision)
+        return round(float(self.balance[self.baseAsset]['amt']) * self.symbol['ask'] ,self.basePrecision)
     ########################### cancle order ###########################
     def cancel_openOrder(self):
         if(len(self.openOrder)>0):
@@ -176,13 +179,13 @@ class main():
                     save_json(self.openOrder,'open_order.json')
 
     ########################### open order ###########################
-    def place_orders_open(self,sym,side,quantity,price,order_comment):
+    def place_orders_open(self,sym,side,quantity,order_comment):
         if side == 'BUY':
             price = self.symbol['ask']
         else:
             price = self.symbol['bid']
         
-        res = self.client.place_orders(symbol=sym, side=side, price=price,ordertype='limit', quantity=quantity)
+        res = self.client.place_orders(symbol=sym, side=side, price=price,ordertype='limit', timeInForce='GTC', quantity=quantity)
         
         print('#################### place_orders_open ####################')
         print(res)
@@ -205,7 +208,7 @@ class main():
                         
     def rebalance(self):
 
-        ask   = self.symbol['asks']
+        ask   = self.symbol['ask']
         symbol= self.symbol['symbol']    
                      
         #rebalance Diff Quote
@@ -300,7 +303,7 @@ class main():
         elif(ticker):
             # have't file wallet.json 
             # ask price
-            ask  = self.symbol['asks']
+            ask  = self.symbol['ask']
             # get balance amt 
             balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
             # create_sub_wallet_condition
@@ -336,7 +339,7 @@ class main():
     
     def start(self):
         if self.get_ticker() :
-            ask  = self.symbol['asks']
+            ask  = self.symbol['ask']
             self.balance[self.baseAsset]['value'] = round(self.balance[self.baseAsset]['amt'] * ask,self.quotePrecision)
                     
             #check_openOrder
@@ -358,6 +361,7 @@ class main():
             print(f'{self.system_name} {sym}:{ask} {baseAmt}[{baseValue}]:{quoteValue}  {diff}[{diffPercent}%]   {self.time_string}              ',end='\r')
         else:           
             print(f'{self.system_name} connection failed {self.time_string}                                                                      ',end='\r')
+
 
 
 
