@@ -1,3 +1,3 @@
-python binance_spot_mp.py
+python binance_spot_limit.py
 pause
 

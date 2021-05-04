@@ -38,6 +38,7 @@ class main():
         self.margin = float(config['SYSTEM']['margin'])
         self.quoteAssetNotional = float(config['SYSTEM']['quoteAssetNotional'])
         self.line_token = config['SYSTEM']['line_token']
+        self.openOrder = load_json('open_order.json')
         
         #time
         self.tm = ''
@@ -98,32 +99,114 @@ class main():
   
     def cal_value(self):
         #cal value[0] in base USDT
-        return round(float(self.balance[self.baseAsset]['amt']) * self.symbol['asks'])
-    
-    ########################### open order ###########################
+        return round(float(self.balance[self.baseAsset]['amt']) * self.symbol['asks'] ,self.basePrecision)
+    ########################### cancle order ###########################
+    def cancel_openOrder(self):
+        if(len(self.openOrder)>0):
+            for ord_ in self.openOrder:
+                order =  self.client.cancel_order(self.symbol['symbol'],ord_["orderId"])
+                
+                #save openOrder
+                self.openOrder.remove(ord_)
+                save_json(self.openOrder,'open_order.json')
+                
+                print("#############CANCEL ORDER###############")
+                print(order)
+                print("########################################")
 
-    def place_orders_open(self,sym,side,quantity,order_comment):
-        res = self.client.place_orders(symbol=sym, side=side, ordertype='MARKET', quantity=quantity)
+    ########################### check open order ###########################
+    def check_filled_order(self):
+        if(len(self.openOrder)>0):
+            for ord_ in self.openOrder:
+                order = self.client.get_order(self.symbol['symbol'],ord_["orderId"])
+                if float(order["price"]) == 0 and order["status"] == "FILLED":
+                    print("#############order 0###############")
+                    print(order)
+                    print("###################################")
+                    
+                if order["status"] == "FILLED" and float(order["price"]) != 0:
+                    msg_line=''
+                    price = order["price"]
+                    rebalanceQty = order['executedQty']
+                    symbol = order['symbol']
+
+                    if order["side"] == "BUY":
+                        balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
+                        self.balance[self.baseAsset]['amt']  = round(balance_binance[self.baseAsset], self.basePrecision)
+
+                        self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * float(order["price"]) ,self.basePrecision)
+                        self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']    - order['cummulativeQuoteQty'] ,self.basePrecision)
+                        self.balance[self.quoteAsset]['value']= round( self.balance[self.quoteAsset]['value'] - order['cummulativeQuoteQty'] ,self.basePrecision)
+
+                        #write_csv
+                        res[self.baseAsset] = self.balance[self.baseAsset]
+                        res[self.quoteAsset] = self.balance[self.quoteAsset]
+                        write_csv(order,'log.csv')
+
+                        quoteValue = self.balance[self.quoteAsset]['value']
+                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty}'
+
+                    elif order["side"] == "SELL":
+                        balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
+                        self.balance[self.baseAsset]['amt']  = round(balance_binance[self.baseAsset], self.basePrecision)
+
+                        self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * float(order["price"]) ,self.basePrecision)
+                        self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']   + order['cummulativeQuoteQty'] ,self.basePrecision)
+                        self.balance[self.quoteAsset]['value']= round( self.balance[self.quoteAsset]['value']+ order['cummulativeQuoteQty'] ,self.basePrecision)
+
+                        #write_csv
+                        res[self.baseAsset] = self.balance[self.baseAsset]
+                        res[self.quoteAsset] = self.balance[self.quoteAsset]
+                        write_csv(order,'log.csv')
+
+                        quoteValue = self.balance[self.quoteAsset]['value']                                
+                        msg_line = f'{self.system_name} SELL {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty}'
+                    
+                    print("#############FILLED ORDER###############")
+                    print(order)
+                    print("########################################")
+                    
+                    lineSendMas(self.line_token,msg_line)
+
+                    #save balance
+                    save_json(self.balance,'wallet.json')
+                    
+                    #save openOrder
+                    self.openOrder.remove(ord_)
+                    save_json(self.openOrder,'open_order.json')
+
+    ########################### open order ###########################
+    def place_orders_open(self,sym,side,quantity,price,order_comment):
+        if side == 'BUY':
+            price = self.symbol['ask']
+        else:
+            price = self.symbol['bid']
+        
+        res = self.client.place_orders(symbol=sym, side=side, price=price,ordertype='limit', quantity=quantity)
+        
         print('#################### place_orders_open ####################')
         print(res)
         print('#################### ################# ####################')
+        
         restime = timestampToDatetime( int(res["transactTime"])/1000 )
-        return{ 'orderId' : res['orderId'],
+        
+        #save openOrder
+        self.openOrder.append({ 'orderId' : res['orderId'],
                 'open_date': f'{restime}',
-                'open_price': self.symbol['asks'],
+                'open_price': price,
                 'side':res['side'],
                 'origQty': res['origQty'],
                 'cummulativeQuoteQty': float(res['cummulativeQuoteQty']),
                 'status':res['status'],
                 'fills':res['fills'],
                 'order_comment':f'{order_comment}',
-                }
+                })
+        save_json(self.openOrder,'open_order.json')
                         
     def rebalance(self):
 
         ask   = self.symbol['asks']
-        symbol= self.symbol['symbol']
-                     
+        symbol= self.symbol['symbol']    
                      
         #rebalance Diff Quote
         rebalanceDiff = abs(self.balance[self.quoteAsset]['value'] - self.balance[self.baseAsset]['value'])
@@ -135,9 +218,12 @@ class main():
         #check Qty&Notional
         check_minQty = rebalanceQty > self.minQty 
         check_minNotional = rebalanceDiff/2 > self.minNotional 
-
+        
+        #check openOrder
+        check_openedOrder = True if len(self.openOrder) == 0 else False
+                               
         #Send order
-        if(rebalanceCon and check_minQty and check_minNotional):
+        if(rebalanceCon and check_minQty and check_minNotional and check_openedOrder):
             base_v = self.balance[self.baseAsset]['value']
             print('#################### Value ####################')
             print(f'rebalanceCon : {rebalanceCon}')
@@ -153,46 +239,9 @@ class main():
             if( self.balance[self.quoteAsset]['value'] > self.balance[self.baseAsset]['value'] ):
                 res=self.place_orders_open(symbol,'BUY',rebalanceQty,order_comment)
                 
-                #self.balance[self.baseAsset]['amt'] = self.balance[self.baseAsset]['amt'] + rebalanceQty
-                #get all baseAsset amt 
-                balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
-                self.balance[self.baseAsset]['amt']  = round(balance_binance[self.baseAsset], self.basePrecision)
-                
-                self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] + res['cummulativeQuoteQty'] ,self.basePrecision)
-                self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']    - res['cummulativeQuoteQty'] ,self.basePrecision)
-                self.balance[self.quoteAsset]['value']= round( self.balance[self.quoteAsset]['value'] - res['cummulativeQuoteQty'] ,self.basePrecision)
-                
-                #write_csv
-                res[self.baseAsset] = self.balance[self.baseAsset]
-                res[self.quoteAsset] = self.balance[self.quoteAsset]
-                write_csv(res,'log.csv')
-                
-                quoteValue = self.balance[self.quoteAsset]['value']
-                msg_line = f'{self.system_name} BUY {symbol}:{ask} \r\n value:{quoteValue} qty:{rebalanceQty}'
-                
             #sell [0]
             if( self.balance[self.quoteAsset]['value'] < self.balance[self.baseAsset]['value'] ):
                 res=self.place_orders_open(symbol,'SELL',rebalanceQty,order_comment)
-                
-                self.balance[self.baseAsset]['amt'] = self.balance[self.baseAsset]['amt'] - rebalanceQty
-                self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['value'] - res['cummulativeQuoteQty'] ,self.basePrecision)
-                self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']   + res['cummulativeQuoteQty'] ,self.basePrecision)
-                self.balance[self.quoteAsset]['value']= round( self.balance[self.quoteAsset]['value']+ res['cummulativeQuoteQty'] ,self.basePrecision)
-
-                #write_csv
-                res[self.baseAsset] = self.balance[self.baseAsset]
-                res[self.quoteAsset] = self.balance[self.quoteAsset]
-                write_csv(res,'log.csv')
-                
-                quoteValue = self.balance[self.quoteAsset]['value']
-                msg_line = f'{self.system_name} SELL {symbol}:{ask} \r\n value:{quoteValue} qty:{rebalanceQty}'
-            
-
-            lineSendMas(self.line_token,msg_line)
-            
-            #save value
-            save_json(self.balance,'wallet.json')
-            
         
     ########################### initialize ########################### 
     def initialize(self):
@@ -289,8 +338,15 @@ class main():
         if self.get_ticker() :
             ask  = self.symbol['asks']
             self.balance[self.baseAsset]['value'] = round(self.balance[self.baseAsset]['amt'] * ask,self.quotePrecision)
+                    
+            #check_openOrder
+            self.check_filled_order()       
+            
             
             if self.time_check() :
+                #close order
+                self.cancel_openOrder() 
+                #rebalance
                 self.rebalance()
             
             sym = self.symbol['symbol']
@@ -302,6 +358,7 @@ class main():
             print(f'{self.system_name} {sym}:{ask} {baseAmt}[{baseValue}]:{quoteValue}  {diff}[{diffPercent}%]   {self.time_string}              ',end='\r')
         else:           
             print(f'{self.system_name} connection failed {self.time_string}                                                                      ',end='\r')
+
 
 
 

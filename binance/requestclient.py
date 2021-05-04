@@ -106,6 +106,16 @@ class RequestClient_s:
         builder.put_url("newOrderRespType", newOrderRespType)
         return call_sync(self._request._post_with_signature("/api/v3/order/test", builder,True))
 
+    def cancel_order(self , symbol: 'str', orderId: 'long', origClientOrderId:"str"= None, newClientOrderId:"str"= None):
+        check_should_not_none(symbol, "symbol")
+        check_should_not_none(orderId, "orderId")
+        builder = UrlParamsBuilder()
+        builder.put_url("symbol", symbol)
+        builder.put_url("orderId", orderId)
+        builder.put_url("origClientOrderId", origClientOrderId)
+        builder.put_url("newClientOrderId", newClientOrderId)
+        return call_sync(self._request._create_request_by_delete_with_signature("/api/v3/orde", builder))
+
     def get_account(self,symbol: 'str' = None):
         builder = UrlParamsBuilder()
         res = call_sync(self._request._get_with_signature("/api/v3/account", builder))

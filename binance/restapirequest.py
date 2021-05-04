@@ -80,6 +80,24 @@ class create_request:
             print("=====================")
         return request
 
+    def _create_request_by_delete_with_signature(self, url, builder, printRequest: 'bool' = None)-> any:
+        request = RestApiRequest()
+        request.method = "DELETE"
+        request.host = self._server_url
+        builder.put_url("recvWindow", 60000)
+        builder.put_url("timestamp", str(get_current_timestamp() - 1000))
+        create_signature(self._secret_key, builder)
+        request.header.update({'Content-Type': 'application/json'})
+        request.header.update({"X-MBX-APIKEY": self._api_key})
+        request.url = url + "?" + builder.build_url()
+        # For develop
+        if printRequest == True:
+            print("====== Request ======")
+            print(request)
+            PrintMix.print_data(request)
+            print("=====================")
+        return request
+
 ###############################################################################################
 #----------------------------------------RestApiRequest---------------------------------------#
 ###############################################################################################
