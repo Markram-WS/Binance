@@ -1,0 +1,2 @@
+orderId,open_date,open_price,side,origQty,cummulativeQuoteQty,status,fills,order_comment,BNB,BUSD
+535410653,2021-05-03 13:51:49,646.48,BUY,0.06290000,40.683091,FILLED,"[{'price': '646.79000000', 'qty': '0.06290000', 'commission': '0.00004717', 'commissionAsset': 'BNB', 'tradeId': 54443418}]",BNBBUSD:646.48 81.37749110000004|0.0629 668.6225089,"{'amt': 1.09710371, 'value': 41.78019471}","{'amt': 709.316909, 'value': 709.316909}"
