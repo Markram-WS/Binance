@@ -38,6 +38,8 @@ class main():
         self.margin = float(config['SYSTEM']['margin'])
         self.quoteAssetNotional = float(config['SYSTEM']['quoteAssetNotional'])
         self.line_token = config['SYSTEM']['line_token']
+
+        # openOrder load
         self.openOrder = list([])
         load_ord = load_json('open_order.json')
         for i in load_ord:
@@ -134,8 +136,9 @@ class main():
                     symbol = order['symbol']
 
                     if order["side"] == "BUY":
+                        #get acc
                         balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
-                        self.balance[self.baseAsset]['amt']  = round(balance_binance[self.baseAsset], self.basePrecision)
+                        self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
 
                         self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * float(order["price"]) ,self.basePrecision)
                         self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']    - order['cummulativeQuoteQty'] ,self.basePrecision)
@@ -150,8 +153,9 @@ class main():
                         msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty}'
 
                     elif order["side"] == "SELL":
+                        #get acc
                         balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
-                        self.balance[self.baseAsset]['amt']  = round(balance_binance[self.baseAsset], self.basePrecision)
+                        self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
 
                         self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * float(order["price"]) ,self.basePrecision)
                         self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']   + order['cummulativeQuoteQty'] ,self.basePrecision)
@@ -325,8 +329,7 @@ class main():
                     self.balance[self.baseAsset]['value']  = round( balance_binance[self.baseAsset]*ask, self.quotePrecision)
                     self.balance[self.quoteAsset]['amt'] = round(  self.quoteAssetNotional, self.quotePrecision)
                     self.balance[self.quoteAsset]['value'] = round( self.quoteAssetNotional , self.quotePrecision)
-
-                
+ 
             else:
                 print("error : not enough quoteAsset") 
                 return False
