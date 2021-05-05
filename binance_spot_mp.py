@@ -88,9 +88,9 @@ class main():
     def get_ticker(self):
         try:
             ticker = self.client.MKTdepth(self.symbol['symbol'])
-            self.symbol['bids'] = round(float(ticker['bids'][0][0]),self.tickPoint)
+            self.symbol['bid'] = round(float(ticker['bids'][0][0]),self.tickPoint)
             self.symbol['bidv'] = round(float(ticker['bids'][0][1]),self.Qtypoint)
-            self.symbol['asks'] = round(float(ticker['asks'][0][0]),self.tickPoint)
+            self.symbol['ask'] = round(float(ticker['asks'][0][0]),self.tickPoint)
             self.symbol['askv'] = round(float(ticker['asks'][0][1]),self.Qtypoint)
             return True
         except:
@@ -98,7 +98,7 @@ class main():
   
     def cal_value(self):
         #cal value[0] in base USDT
-        return round(float(self.balance[self.baseAsset]['amt']) * self.symbol['asks'])
+        return round(float(self.balance[self.baseAsset]['amt']) * self.symbol['ask'])
     
     ########################### open order ###########################
 
@@ -110,7 +110,7 @@ class main():
         restime = timestampToDatetime( int(res["transactTime"])/1000 )
         return{ 'orderId' : res['orderId'],
                 'open_date': f'{restime}',
-                'open_price': self.symbol['asks'],
+                'open_price': self.symbol['ask'],
                 'side':res['side'],
                 'origQty': res['origQty'],
                 'cummulativeQuoteQty': float(res['cummulativeQuoteQty']),
@@ -121,9 +121,8 @@ class main():
                         
     def rebalance(self):
 
-        ask   = self.symbol['asks']
+        ask   = self.symbol['ask']
         symbol= self.symbol['symbol']
-                     
                      
         #rebalance Diff Quote
         rebalanceDiff = abs(self.balance[self.quoteAsset]['value'] - self.balance[self.baseAsset]['value'])
@@ -251,7 +250,7 @@ class main():
         elif(ticker):
             # have't file wallet.json 
             # ask price
-            ask  = self.symbol['asks']
+            ask  = self.symbol['ask']
             # get balance amt 
             balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
             # create_sub_wallet_condition
@@ -273,8 +272,7 @@ class main():
                     self.balance[self.baseAsset]['value']  = round( balance_binance[self.baseAsset]*ask, self.quotePrecision)
                     self.balance[self.quoteAsset]['amt'] = round(  self.quoteAssetNotional, self.quotePrecision)
                     self.balance[self.quoteAsset]['value'] = round( self.quoteAssetNotional , self.quotePrecision)
-
-                
+   
             else:
                 print("error : not enough quoteAsset") 
                 return False
@@ -287,7 +285,7 @@ class main():
     
     def start(self):
         if self.get_ticker() :
-            ask  = self.symbol['asks']
+            ask  = self.symbol['ask']
             self.balance[self.baseAsset]['value'] = round(self.balance[self.baseAsset]['amt'] * ask,self.quotePrecision)
             
             if self.time_check() :
