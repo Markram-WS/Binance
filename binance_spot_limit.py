@@ -9,9 +9,11 @@ import configparser
 from binance import RequestClient_s
 from binance.utils.timeservice import *
 from system.symbol import *
-from system.manageorder import *
-from system.utils import *
-
+from system.manageorder import load_json
+from system.manageorder import save_json
+from system.manageorder import write_csv
+from system.utils import lineSendMas
+from system.utils import decimal_point
 
 
 ###################################################################################
@@ -41,7 +43,7 @@ class main():
 
         # openOrder load
         self.openOrder = list([])
-        load_ord = load_json('open_order.json')
+        load_ord = load_json('openedOrder.json')
         for i in load_ord:
             self.openOrder.append(i)
         
@@ -113,7 +115,7 @@ class main():
                 
                 #save openOrder
                 self.openOrder.remove(ord_)
-                save_json(self.openOrder,'open_order.json')
+                save_json(self.openOrder,'openedOrder.json')
                 
                 print("#############CANCEL ORDER###############")
                 print(order)
@@ -122,52 +124,91 @@ class main():
     ########################### check open order ###########################
     def check_filled_order(self):
         if(len(self.openOrder)>0):
-            for ord_ in self.openOrder:
-                order = self.client.get_order(self.symbol['symbol'],ord_["orderId"])
-                if float(order["price"]) == 0 and order["status"] == "FILLED":
-                    print("#############order 0###############")
-                    print(order)
+            for order in self.openOrder:
+                delDict = order
+                _order = self.client.get_order(self.symbol['symbol'],order["orderId"])
+                if float(_order["price"]) == 0 and _order["status"] == "FILLED":
+                    print("############# order ###############")
+                    print(_order)
                     print("###################################")
                     
-                if order["status"] == "FILLED" and float(order["price"]) != 0:
+                if _order["status"] == "FILLED" and float(_order["price"]) != 0:
                     msg_line=''
-                    price = order["price"]
-                    rebalanceQty = order['executedQty']
-                    symbol = order['symbol']
+                    price = _order["price"]
+                    
+                    symbol = _order['symbol']
+                    
+                    order['price'] = _order["price"]
+                    order['origQty'] = _order["origQty"]
+                    order['cummulativeQuoteQty'] = _order["cummulativeQuoteQty"]
+                    rebalanceQty = round(float(_order['executedQty']),self.basePrecision)
+                    cummulativeQuoteQty =round(float( _order['cummulativeQuoteQty']),self.quotePrecision)
+
 
                     if order["side"] == "BUY":
-                        #get acc
-                        balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
-                        self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
+                        #get acc from binance
+                        #balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
+                        #self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
 
-                        self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * float(order["price"]) ,self.basePrecision)
-                        self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']    - order['cummulativeQuoteQty'] ,self.basePrecision)
-                        self.balance[self.quoteAsset]['value']= round( self.balance[self.quoteAsset]['value'] - order['cummulativeQuoteQty'] ,self.basePrecision)
+                        #adj from json
+                        #baseAsset amt
+                        if order["commissionAsset"] == self.baseAsset:
+                            self.balance[self.baseAsset]['amt']  = round( self.balance[self.baseAsset]['amt'] + rebalanceQty - order["commission"],self.basePrecision)
+                        else:
+                            self.balance[self.baseAsset]['amt']  = round( self.balance[self.baseAsset]['amt'] + rebalanceQty ,self.basePrecision)
+                        #baseAsset value
+                        self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * price  ,self.quotePrecision)
+
+                        #quoteAsset amt
+                        if order["commissionAsset"] == self.quoteAsset:
+                            self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']  - cummulativeQuoteQty - order["commission"],self.quotePrecision)
+                        else:
+                            self.balance[self.quoteAsset]['value'] = round( self.balance[self.quoteAsset]['amt'] - cummulativeQuoteQty ,self.quotePrecision)
+                        #quoteAsset value
+                        self.balance[self.quoteAsset]['value'] = self.balance[self.quoteAsset]['amt'] 
+
 
                         #write_csv
-                        res[self.baseAsset] = self.balance[self.baseAsset]
-                        res[self.quoteAsset] = self.balance[self.quoteAsset]
+                        del order['fills']
+                        order[self.baseAsset] =self.balance[self.baseAsset]['amt'] 
+                        order[self.quoteAsset] = self.balance[self.quoteAsset]['amt'] 
                         write_csv(order,'log.csv')
 
-                        quoteValue = self.balance[self.quoteAsset]['value']
-                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty}'
+                        quoteValue = self.balance[self.quoteAsset]['amt'] 
+                        totalValue = order[self.baseAsset] + order[self.quoteAsset]
+                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty} totalValue{totalValue}'
 
                     elif order["side"] == "SELL":
-                        #get acc
-                        balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
-                        self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
+                        #get acc from binance
+                        #balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
+                        #self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
 
-                        self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * float(order["price"]) ,self.basePrecision)
-                        self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']   + order['cummulativeQuoteQty'] ,self.basePrecision)
-                        self.balance[self.quoteAsset]['value']= round( self.balance[self.quoteAsset]['value']+ order['cummulativeQuoteQty'] ,self.basePrecision)
+                        #adj from json
+                        #baseAsset amt
+                        if order["commissionAsset"] == self.baseAsset:
+                            self.balance[self.baseAsset]['amt']  = round( self.balance[self.baseAsset]['amt'] - rebalanceQty - order["commission"],self.basePrecision)
+                        else:
+                            self.balance[self.baseAsset]['amt']  = round( self.balance[self.baseAsset]['amt'] - rebalanceQty ,self.basePrecision)
+                        #baseAsset value
+                        self.balance[self.baseAsset]['value'] = round( self.balance[self.baseAsset]['amt'] * price  ,self.quotePrecision)
+                        
+                        #quoteAsset amt
+                        if order["commissionAsset"] == self.quoteAsset:
+                            self.balance[self.quoteAsset]['amt'] = round( self.balance[self.quoteAsset]['amt']  + cummulativeQuoteQty - order["commission"],self.quotePrecision)
+                        else:
+                            self.balance[self.quoteAsset]['value'] = round( self.balance[self.quoteAsset]['amt'] + cummulativeQuoteQty ,self.quotePrecision)
+                        #quoteAsset value
+                        self.balance[self.quoteAsset]['value'] = self.balance[self.quoteAsset]['amt'] 
 
                         #write_csv
-                        res[self.baseAsset] = self.balance[self.baseAsset]
-                        res[self.quoteAsset] = self.balance[self.quoteAsset]
+                        del order['fills']
+                        order[self.baseAsset] =self.balance[self.baseAsset]['amt'] 
+                        order[self.quoteAsset] = self.balance[self.quoteAsset]['amt'] 
                         write_csv(order,'log.csv')
 
-                        quoteValue = self.balance[self.quoteAsset]['value']                                
-                        msg_line = f'{self.system_name} SELL {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty}'
+                        quoteValue = self.balance[self.quoteAsset]['amt'] 
+                        totalValue = order[self.baseAsset] + order[self.quoteAsset]
+                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty} totalValue{totalValue}'
                     
                     print("#############FILLED ORDER###############")
                     print(order)
@@ -178,9 +219,10 @@ class main():
                     #save balance
                     save_json(self.balance,'wallet.json')
                     
+
                     #save openOrder
-                    self.openOrder.remove(ord_)
-                    save_json(self.openOrder,'open_order.json')
+                    self.openOrder.remove(delDict)
+                    save_json(self.openOrder,'openedOrder.json')
 
     ########################### open order ###########################
     def place_orders_open(self,sym,side,quantity,order_comment):
@@ -197,18 +239,24 @@ class main():
         
         restime = timestampToDatetime( int(res["transactTime"])/1000 )
         
+        for fill in res['fills']:
+            commission = float(fill["commission"])
+            commissionAsset = fill["commissionAsset"]
+
+
         #save openOrder
         self.openOrder.append({ 'orderId' : res['orderId'],
-                'open_date': f'{restime}',
-                'open_price': price,
+                'date': f'{restime}',
+                'price': price,
                 'side':res['side'],
                 'origQty': res['origQty'],
                 'cummulativeQuoteQty': float(res['cummulativeQuoteQty']),
                 'status':res['status'],
-                'fills':res['fills'],
+                'commission':commission,
+                'commissionAsset':commissionAsset,
                 'order_comment':f'{order_comment}',
                 })
-        save_json(self.openOrder,'open_order.json')
+        save_json(self.openOrder,'openedOrder.json')
                         
     def rebalance(self):
 
@@ -217,8 +265,10 @@ class main():
                      
         #rebalance Diff Quote
         rebalanceDiff = abs(self.balance[self.quoteAsset]['value'] - self.balance[self.baseAsset]['value'])
+
         #rebalance Condition Quote
         rebalanceCon = rebalanceDiff > self.margin
+
         #rebalance Qty
         rebalanceQty = round( (rebalanceDiff/2)/ask ,self.Qtypoint)
         
@@ -344,14 +394,12 @@ class main():
         if self.get_ticker() :
             ask  = self.symbol['ask']
             self.balance[self.baseAsset]['value'] = round(self.balance[self.baseAsset]['amt'] * ask,self.quotePrecision)
-                    
-            #check_openOrder
-            self.check_filled_order()       
-            
-            
+                  
             if self.time_check() :
                 #close order
-                self.cancel_openOrder() 
+                #self.cancel_openOrder() 
+                #check_openOrder
+                self.check_filled_order()     
                 #rebalance
                 self.rebalance()
             
