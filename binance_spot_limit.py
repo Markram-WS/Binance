@@ -134,7 +134,7 @@ class main():
                     
                 if _order["status"] == "FILLED" and float(_order["price"]) != 0:
                     msg_line=''
-                    price = _order["price"]
+                    price = float(_order["price"])
                     
                     symbol = _order['symbol']
                     
@@ -175,8 +175,8 @@ class main():
                         write_csv(order,'log.csv')
 
                         quoteValue = self.balance[self.quoteAsset]['amt'] 
-                        totalValue = order[self.baseAsset] + order[self.quoteAsset]
-                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty} totalValue{totalValue}'
+                        totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
+                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty} totalValue:{totalValue}'
 
                     elif order["side"] == "SELL":
                         #get acc from binance
@@ -201,14 +201,13 @@ class main():
                         self.balance[self.quoteAsset]['value'] = self.balance[self.quoteAsset]['amt'] 
 
                         #write_csv
-                        del order['fills']
                         order[self.baseAsset] =self.balance[self.baseAsset]['amt'] 
                         order[self.quoteAsset] = self.balance[self.quoteAsset]['amt'] 
                         write_csv(order,'log.csv')
 
                         quoteValue = self.balance[self.quoteAsset]['amt'] 
-                        totalValue = order[self.baseAsset] + order[self.quoteAsset]
-                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty} totalValue{totalValue}'
+                        totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
+                        msg_line = f'{self.system_name} SELL {symbol}:{price} \r\n value:{quoteValue} qty:{rebalanceQty} totalValue:{totalValue}'
                     
                     print("#############FILLED ORDER###############")
                     print(order)
@@ -227,9 +226,9 @@ class main():
     ########################### open order ###########################
     def place_orders_open(self,sym,side,quantity,order_comment):
         if side == 'BUY':
-            price = self.symbol['ask']
-        else:
             price = self.symbol['bid']
+        else:
+            price = self.symbol['ask']
         
         res = self.client.place_orders(symbol=sym, side=side, price=price,ordertype='limit', timeInForce='GTC', quantity=quantity)
         
