@@ -317,12 +317,10 @@ class main():
         check_minNotional = baseDiff > self.minNotional 
         
         #check openOrder == 0
-        #check_openedOrder = True if len(self.openOrder) == 0 else False
-
-
+        check_openedOrder = True if len(self.openOrder) == 0 else False
 
         #Send order
-        if(rebalanceSide != '' and check_minQty and check_minNotional):
+        if(rebalanceSide != '' and check_minQty and check_minNotional and check_openedOrder):
             quoteAssetV = self.balance[self.quoteAsset]['value']
             baseAssetV = self.balance[self.baseAsset]['value']
             print('#################### Parameter ####################')
