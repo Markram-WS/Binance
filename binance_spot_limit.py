@@ -182,9 +182,10 @@ class main():
                         write_csv(order,'log.csv')
 
                         assetAmt = self.balance[self.baseAsset]['amt'] 
+                        assetValue = self.balance[self.baseAsset]['value']
                         quoteAmt = self.balance[self.quoteAsset]['amt'] 
                         totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
-                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}] assetAmt:{assetAmt} \r\n quoteAmt:{quoteAmt} '
+                        msg_line = f'{self.system_name} BUY {symbol}:{price}\r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}] \r\n assetAmt:{assetAmt}[{assetValue}] quoteAmt:{quoteAmt}\r\n totalValue:{totalValue}'
 
                     elif order["side"] == "SELL":
                         #get acc from binance
@@ -213,9 +214,11 @@ class main():
                         order[self.quoteAsset] = self.balance[self.quoteAsset]['amt'] 
                         write_csv(order,'log.csv')
 
-                        quoteValue = self.balance[self.quoteAsset]['amt'] 
+                        assetAmt = self.balance[self.baseAsset]['amt'] 
+                        assetValue = self.balance[self.baseAsset]['value']
+                        quoteAmt = self.balance[self.quoteAsset]['amt'] 
                         totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
-                        msg_line = f'{self.system_name} BUY {symbol}:{price} \r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}] assetAmt:{assetAmt} \r\n quoteAmt:{quoteAmt} '
+                        msg_line = f'{self.system_name} BUY {symbol}:{price}\r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}] \r\n assetAmt:{assetAmt}[{assetValue}] quoteAmt:{quoteAmt}\r\n totalValue:{totalValue}'
                     
                     print("############# FILLED ORDER ###############")
                     print(order)
@@ -237,6 +240,8 @@ class main():
             price = self.symbol['bid']
         else:
             price = self.symbol['ask']
+
+        symbol = self.symbol['symbol']
         
         res = self.client.place_orders(symbol=sym, side=side, price=price,ordertype='limit', timeInForce='GTC', quantity=quantity)
         
