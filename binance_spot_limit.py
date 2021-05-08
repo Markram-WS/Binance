@@ -40,9 +40,8 @@ class main():
         self.margin = float(config['SYSTEM']['margin'])
         self.assetNotional = float(config['SYSTEM']['assetNotional'])
         self.line_token = config['SYSTEM']['line_token']
-        self.assetRatio = float(config['SYSTEM']['baseAssetRatio'])
-        self.baseAssetRatio =  self.assetRatio/( 1- self.assetRatio )
-        self.quoteAssetRatio = 1
+        self.baseAssetRatio =  float(config['SYSTEM']['baseAssetRatio'])
+        self.quoteAssetRatio = 1 - self.baseAssetRatio
         self.portfolioValue = {}
 
         # openOrder load
@@ -283,9 +282,10 @@ class main():
     def calculate_rebalance(self):
         ask   = self.symbol['ask']     
         totalValue = self.balance[self.quoteAsset]['value'] + self.balance[self.baseAsset]['value']
-        baseAssetRatioValue  = self.baseAssetRatio * self.balance[self.quoteAsset]['value'] 
-        quoteAssetRatioValue = self.balance[self.quoteAsset]['value'] 
-        baseDiff  = self.balance[self.baseAsset]['value'] - baseAssetRatioValue
+        baseAssetRatioValue  = totalValue * self.baseAssetRatio
+        quoteAssetRatioValue = totalValue * self.quoteAssetRatio 
+        baseDiff  =  self.balance[self.baseAsset]['value'] - baseAssetRatioValue
+        quoteDiff =  self.balance[self.quoteAsset]['value'] - quoteAssetRatioValue
 
         #keep value to echo
         self.portfolioValue['symbol'] = self.symbol['symbol']
@@ -297,6 +297,7 @@ class main():
         self.portfolioValue['quoteAssetAmt'] = round(self.balance[self.quoteAsset]['amt'],self.quotePrecision)
         self.portfolioValue['quoteAssetValue'] = round(self.balance[self.quoteAsset]['value'],self.quotePrecision)
         self.portfolioValue['baseDiff']   = round(baseDiff,self.quotePrecision)
+        self.portfolioValue['quoteDiff']   = round(baseDiff,self.quotePrecision)
         self.portfolioValue['totalValue'] = round(totalValue,self.quotePrecision)
 
     def rebalancing(self):
@@ -396,15 +397,15 @@ class main():
             # get balance amt 
             balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
 
-            baseValueRequire = self.assetNotional * self.assetRatio
-            quoteValueRequire= self.assetNotional * (1-self.assetRatio)
+            baseValueRequire = self.assetNotional * self.baseAssetRatio 
+            quoteValueRequire= self.assetNotional * self.quoteAssetRatio 
             
             #baseAsset
             if(balance_binance[self.baseAsset]*ask >= baseValueRequire):#baseAsset >
                 self.balance[self.baseAsset]['value']  = round( baseValueRequire, self.quotePrecision)
                 self.balance[self.baseAsset]['amt']  = round( baseValueRequire/ask, self.basePrecision)
             elif(balance_binance[self.baseAsset]*ask < baseValueRequire  #baseAsset <
-            and balance_binance[self.baseAsset]*ask + balance_binance[self.quoteAsset] > self.assetNotional):
+            and balance_binance[self.baseAsset]*ask + balance_binance[self.quoteAsset] > self.assetNotional ):
                 self.balance[self.baseAsset]['value']  = round( balance_binance[self.baseAsset]*ask, self.quotePrecision)
                 self.balance[self.baseAsset]['amt']  = round( balance_binance[self.baseAsset], self.basePrecision)
             else:
@@ -415,7 +416,7 @@ class main():
                 self.balance[self.quoteAsset]['value'] = round( quoteValueRequire , self.quotePrecision)
                 self.balance[self.quoteAsset]['amt'] = round(  quoteValueRequire, self.quotePrecision)
             elif(balance_binance[self.quoteAsset] < quoteValueRequire  #baseAsset <
-            and balance_binance[self.quoteAsset] + balance_binance[self.quoteAsset]*ask > self.assetNotional):
+            and balance_binance[self.quoteAsset] + balance_binance[self.quoteAsset]*ask > self.assetNotional ):
                 self.balance[self.quoteAsset]['value'] = round( balance_binance[self.quoteAsset]  , self.quotePrecision)
                 self.balance[self.quoteAsset]['amt'] = round(  balance_binance[self.quoteAsset] , self.quotePrecision)
             else:
@@ -443,7 +444,7 @@ class main():
                 self.check_filled_order()    
                  
                 #--rebalance
-                self.rebalancing()
+                #self.rebalancing()
             
             #---echo
             sym = self.portfolioValue['symbol'] 
