@@ -447,7 +447,7 @@ class main():
                 self.check_filled_order()    
                  
                 #--rebalance
-                #self.rebalancing()
+                self.rebalancing()
             
             #---echo
             sym = self.portfolioValue['symbol'] 
