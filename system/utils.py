@@ -22,11 +22,28 @@ def lineSendMas(token,msg_line):
     requests.post(url_line, headers=headers_line , data = {'message':msg_line})
 
 
-def decimal_point(text):
-    point = 0
+def decimal_nPoint(text):
+    nPoint = 0
+    begincount = False
+    text = str(text)
     for i in range(len(text)):
-        if text[i] != '0' and text[i] != '.':
-            point = i-1
-    return point
+        if text[i] == '.':
+            begincount = True
+        if begincount and text[i] != '.':
+            nPoint = i
+    return nPoint
 
 
+
+def precision_format(text):
+    begincount = False
+    precision_text = '0.' 
+    text = str(text)
+    for i in range(len(text)):
+        if text[i] == '.':
+            begincount = True
+        if begincount and text[i] != '.':
+            precision_text = precision_text + '0'
+        elif begincount and i == len(text)-1:
+            precision_text = precision_text + '1'
+    return precision_text

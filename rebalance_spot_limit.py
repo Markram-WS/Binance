@@ -15,7 +15,7 @@ from system.manageorder import load_json
 from system.manageorder import save_json
 from system.manageorder import write_csv
 from system.utils import lineSendMas
-from system.utils import decimal_point
+from system.utils import decimal_nPoint
 
 
 ###################################################################################
@@ -367,12 +367,12 @@ class main():
 
             for filters in sym_info['filters']:
                 if filters['filterType'] == 'PRICE_FILTER':
-                    self.tickPoint = decimal_point(filters['tickSize'])
+                    self.tickPoint = decimal_nPoint(filters['tickSize'])
                 if filters['filterType'] == 'MIN_NOTIONAL':
                     self.minNotional = float(filters['minNotional'])
                 if filters['filterType'] == 'LOT_SIZE': 
                     self.minQty = float(filters['minQty'])
-                    self.Qtypoint = decimal_point(filters['minQty'])
+                    self.Qtypoint = decimal_nPoint(filters['minQty'])
             self.balance[self.quoteAsset]={}
             self.balance[self.baseAsset]={}
             return True
