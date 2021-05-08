@@ -6,6 +6,8 @@ import threading
 #----------
 import configparser
 #----------
+from timeFucntion import timeFucntion
+#----------
 from binance import RequestClient_s
 from binance.utils.timeservice import *
 from system.symbol import *
@@ -53,9 +55,9 @@ class main():
         #time
         self.tm = ''
         self.time_string = ''
-        self.time_interval = int(config['SYSTEM']['time_interval'])
-        self.interval = config['SYSTEM']['interval']
         self.time_store_value = 0
+        self.interval = config['SYSTEM']['interval']
+        self.timeFunction = timeFucntion()
         
         #baseAssetInfo
         self.baseAsset = ''
@@ -82,10 +84,11 @@ class main():
         
         if getattr(self.tm,self.interval) != self.time_store_value :
             self.time_store_value = getattr(self.tm,self.interval)
-            if self.time_interval != 0 and getattr(self.tm,self.interval) % self.time_interval == 0:
+            #time function
+            #####################
+            if self.timeFunction.time_condition():
                 return True
-            elif self.time_interval == 0 and  getattr(self.tm,self.interval) == 0:
-                return True
+            #####################
         else:
             return False
 
