@@ -6,7 +6,7 @@ import threading
 #----------
 import configparser
 #----------
-from timeFucntion import timeFucntion
+from timeFunction import timeFunction
 #----------
 from binance import RequestClient_s
 from binance.utils.timeservice import *
@@ -57,7 +57,7 @@ class main():
         self.time_string = ''
         self.time_store_value = 0
         self.interval = config['SYSTEM']['interval']
-        self.timeFunction = timeFucntion()
+        self.timeFunction = timeFunction()
         
         #baseAssetInfo
         self.baseAsset = ''
