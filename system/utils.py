@@ -17,9 +17,10 @@ def timeframe_convert(tf):
 
 ########################### Msg Line ###########################   
 def lineSendMas(token,msg_line):
-    url_line = 'https://notify-api.line.me/api/notify'
-    headers_line = {'content-type':'application/x-www-form-urlencoded','Authorization':'Bearer '+ token}
-    requests.post(url_line, headers=headers_line , data = {'message':msg_line})
+    if token != '':
+        url_line = 'https://notify-api.line.me/api/notify'
+        headers_line = {'content-type':'application/x-www-form-urlencoded','Authorization':'Bearer '+ token}
+        requests.post(url_line, headers=headers_line , data = {'message':msg_line})
 
 
 def decimal_nPoint(text):
