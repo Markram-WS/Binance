@@ -23,7 +23,7 @@ def lineSendMas(token,msg_line):
         requests.post(url_line, headers=headers_line , data = {'message':msg_line})
 
 
-def decimal_nPoint(text):
+def decimal_nPoint(impout):
     nPoint = 0
     simpout = str(impout)
     simpout = simpout.split('.')

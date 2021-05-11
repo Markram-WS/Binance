@@ -114,7 +114,7 @@ class RequestClient_s:
         builder.put_url("orderId", orderId)
         builder.put_url("origClientOrderId", origClientOrderId)
         builder.put_url("newClientOrderId", newClientOrderId)
-        return call_sync(self._request._create_request_by_delete_with_signature("/api/v3/orde", builder))
+        return call_sync(self._request._create_request_by_delete_with_signature("/api/v3/order", builder))
 
     def get_account(self,symbol: 'str' = None):
         builder = UrlParamsBuilder()
