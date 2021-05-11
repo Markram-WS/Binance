@@ -329,13 +329,16 @@ class main():
         #check openOrder == 0
         check_openedOrder = True if len(self.openOrder) == 0 else False
 
+        print(baseDiff)   
+        print(check_minQty)    
+        print(check_minNotional)    
+        print(check_openedOrder)   
         #Send order
         if(rebalanceSide != '' and check_minQty and check_minNotional and check_openedOrder):
             quoteAssetV = self.balance[self.quoteAsset]['value']
             baseAssetV = self.balance[self.baseAsset]['value']
 
             order_comment = f"{self.symbol['symbol']}:{ask} {baseDiff}|{rebalanceQty} [{totalValue}]"
-             
             self.place_orders_open(self.symbol['symbol'], rebalanceSide, rebalanceQty, order_comment)
                 
         

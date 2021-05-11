@@ -25,15 +25,14 @@ def lineSendMas(token,msg_line):
 
 def decimal_nPoint(text):
     nPoint = 0
-    begincount = False
-    text = str(text)
-    for i in range(len(text)):
-        if text[i] == '.':
-            begincount = True
-        if begincount and text[i] != '.':
-            nPoint = i
-    return nPoint
-
+    simpout = str(impout)
+    simpout = simpout.split('.')
+    fimpout = float(impout)
+    for i in range(len(simpout[1])+1):
+        decimal = round( fimpout - round(fimpout,i) ,len(simpout[1])+1)
+        if decimal == 0 :
+            return  i
+            break
 
 
 def precision_format(text):
