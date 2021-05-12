@@ -17,7 +17,6 @@ from system.manageorder import write_csv
 from system.utils import lineSendMas
 from system.utils import decimal_nPoint
 
-
 ###################################################################################
 #---------------------------------  main program  --------------------------------#
 ###################################################################################
@@ -31,8 +30,7 @@ class main():
         self.client = RequestClient_s(
             config['API']['server'],
             config['API']['key'].encode(),
-            config['API']['secret'],
-        )
+            config['API']['secret'])
         
         self.api_connect = True
         
@@ -124,14 +122,14 @@ class main():
             print(self.openOrder)
             for ord_ in self.openOrder:
                 order =  self.client.cancel_order(self.symbol['symbol'],ord_["orderId"])
-                
-                #save openOrder
-                self.openOrder.remove(ord_)
-                save_json(self.openOrder,'openedOrder.json')
-                
-                print("############# CANCEL ORDER ###############")
-                print(order)
-                print("##########################################")
+                if  order["status"] == "CANCELED":
+                    #save openOrder
+                    self.openOrder.remove(ord_)
+                    save_json(self.openOrder,'openedOrder.json')
+                    
+                    print("############# CANCEL ORDER ###############")
+                    print(order)
+                    print("##########################################")
 
     ########################### check open order ###########################
     def check_filled_order(self):
@@ -144,7 +142,10 @@ class main():
                         print("############### MP FILLED #################")
                         print(_order)
                         print("###########################################")
-                    
+                except:
+                    _order={}
+
+                if _order != {}:
                     if _order["status"] == "FILLED" and float(_order["price"]) != 0:
                         msg_line=''
                         price = float(_order["price"])
@@ -215,8 +216,7 @@ class main():
                         #save openOrder
                         self.openOrder.remove(delDict)
                         save_json(self.openOrder,'openedOrder.json')
-                except:
-                    continue
+
 
 
     ########################### open order ###########################
@@ -403,8 +403,8 @@ class main():
                 self.balance[self.baseAsset]['value']  = round( balance_binance[self.baseAsset]*ask, self.quotePrecision)
                 self.balance[self.baseAsset]['amt']  = round( balance_binance[self.baseAsset], self.basePrecision)
                 #quoteAsset plus
-                self.balance[self.quoteAsset]['value'] =  + (baseValueRequire - self.balance[self.baseAsset]['value'])
-                self.balance[self.quoteAsset]['amt'] = self.balance[self.quoteAsset]['value']
+                self.balance[self.quoteAsset]['value'] = round((baseValueRequire - self.balance[self.baseAsset]['value']), self.quotePrecision)
+                self.balance[self.quoteAsset]['amt'] = round(self.balance[self.quoteAsset]['value'], self.quotePrecision)
                 
             else:
                 print("error : not enough asset") 
@@ -412,15 +412,15 @@ class main():
             
 
             if(balance_binance[self.quoteAsset]>= quoteValueRequire):#quoteAsset > quoteValueRequire
-                self.balance[self.quoteAsset]['value'] = self.balance[self.quoteAsset]['value'] + round( quoteValueRequire , self.quotePrecision)
-                self.balance[self.quoteAsset]['amt'] =  self.balance[self.quoteAsset]['value']
+                self.balance[self.quoteAsset]['value'] =  round(self.balance[self.quoteAsset]['value'] + round( quoteValueRequire , self.quotePrecision) , self.quotePrecision)
+                self.balance[self.quoteAsset]['amt'] =   round(self.balance[self.quoteAsset]['value'] , self.quotePrecision)
 
             elif(balance_binance[self.quoteAsset] < quoteValueRequire  #quoteAsset > quoteValueRequire
             and balance_binance[self.quoteAsset] + balance_binance[self.baseAsset]*ask > self.assetNotional ):
-                self.balance[self.quoteAsset]['value'] = round( balance_binance[self.quoteAsset]  , self.quotePrecision)
+                self.balance[self.quoteAsset]['value'] = round( balance_binance[self.quoteAsset]  , self.quotePrecision) 
                 self.balance[self.quoteAsset]['amt'] =   round(  balance_binance[self.quoteAsset] , self.quotePrecision)
                 #baseAsset serplus
-                self.balance[self.baseAsset]['value'] =  self.balance[self.baseAsset]['value'] + (quoteValueRequire -  self.balance[self.quoteAsset]['value'] )
+                self.balance[self.baseAsset]['value'] =   round(self.balance[self.baseAsset]['value'] + (quoteValueRequire -  self.balance[self.quoteAsset]['value'] ) , self.basePrecision)
                 self.balance[self.baseAsset]['amt']  = round(self.balance[self.baseAsset]['value'] /ask, self.basePrecision)
 
             else:
@@ -450,7 +450,7 @@ class main():
                 self.cancel_openOrder() 
                  
                 #--rebalance
-                self.rebalancing()
+                #self.rebalancing()
             
             #---echo
             sym = self.portfolioValue['symbol'] 
@@ -465,8 +465,7 @@ class main():
 
             print(f'{self.system_name} {sym}:{ask}, {baseAssetAmt}[{baseAssetValue}]:{quoteAssetValue}, {baseDiff}[{baseDiffPercent}%], {totalValue}, {self.time_string}     ',end='\r')
         else:           
-            print(f'{self.system_name} connection failed {self.time_string}                                                                                                   ',end='\r')
-
+            print(f'{self.system_name} connection failed {self.time_string}                                                                                                       ',end='\r')
 
 
 ################ initialize ################
