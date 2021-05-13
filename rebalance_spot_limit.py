@@ -208,7 +208,7 @@ class main():
                             baseAmt = self.balance[self.baseAsset]['amt'] 
                             baseValue = self.balance[self.baseAsset]['value']
                             quoteAmt = self.balance[self.quoteAsset]['amt'] 
-                            totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
+                            totalValue = round( self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] ,self.quotePrecision)
                             msg_line = f'{self.system_name}\r\n SELL {symbol}:{price}\r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}]\r\n baseAmt:{baseAmt}[{baseValue}]\r\n quoteAmt:{quoteAmt}\r\n totalValue:{totalValue}'
 
                         print('                                                                                                     ',end='\r')
