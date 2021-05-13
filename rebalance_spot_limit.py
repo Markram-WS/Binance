@@ -8,14 +8,16 @@ import configparser
 #----------
 from timeFunction import timeFunction
 #----------
-from binance import RequestClient_s
-from binance.utils.timeservice import *
+from ftx import RequestClient_s
+from ftx.utils.timeservice import *
 from system.symbol import *
 from system.manageorder import load_json
 from system.manageorder import save_json
 from system.manageorder import write_csv
 from system.utils import lineSendMas
 from system.utils import decimal_nPoint
+
+
 
 ###################################################################################
 #---------------------------------  main program  --------------------------------#
@@ -119,17 +121,23 @@ class main():
     ########################### cancle order ###########################
     def cancel_openOrder(self):
         if(len(self.openOrder)>0):
-            print(self.openOrder)
             for ord_ in self.openOrder:
                 order =  self.client.cancel_order(self.symbol['symbol'],ord_["orderId"])
                 if  order["status"] == "CANCELED":
                     #save openOrder
+                    price = ord_['price']
+                    symbol = ord_['symbol']
+                    msg_line = f'{self.system_name} {symbol} {price} [ canceled ]'
                     self.openOrder.remove(ord_)
                     save_json(self.openOrder,'openedOrder.json')
-                    
-                    print("############# CANCEL ORDER ###############")
+                    lineSendMas(self.line_token,msg_line)
+                    print('                                                                                                     ',end='\r')
+                    print(' ###################################### CANCEL ORDER ###################################### ')
                     print(order)
-                    print("##########################################")
+                    print("")
+                    
+                    
+                    
 
     ########################### check open order ###########################
     def check_filled_order(self):
@@ -139,12 +147,12 @@ class main():
                 try:
                     _order = self.client.get_order(self.symbol['symbol'],order["orderId"])
                     if float(_order["price"]) == 0 and _order["status"] == "FILLED":
-                        print("############### MP FILLED #################")
+                        print('                                                                                                     ',end='\r')
+                        print(' ######################################## MP FILLED ####################################### ')
                         print(_order)
-                        print("###########################################")
+                        print("")
                 except:
                     _order={}
-
                 if _order != {}:
                     if _order["status"] == "FILLED" and float(_order["price"]) != 0:
                         msg_line=''
@@ -158,7 +166,7 @@ class main():
                         rebalanceQty = round(float(_order['executedQty']),self.basePrecision)
                         cummulativeQuoteQty =round(float( order['cummulativeQuoteQty']),self.quotePrecision)
 
-                        if order["side"] == "BUY":
+                        if _order["side"] == "BUY":
                             #get acc from binance
                             #balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
                             #self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
@@ -178,10 +186,10 @@ class main():
                             baseAmt = self.balance[self.baseAsset]['amt'] 
                             baseValue = self.balance[self.baseAsset]['value']
                             quoteAmt = self.balance[self.quoteAsset]['amt'] 
-                            totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
+                            totalValue = round( self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value']  ,self.quotePrecision)
                             msg_line = f'{self.system_name}\r\n BUY {symbol}:{price}\r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}]\r\n baseAmt:{baseAmt}[{baseValue}]\r\n quoteAmt:{quoteAmt}\r\n totalValue:{totalValue}'
                 
-                        elif order["side"] == "SELL":
+                        elif _order["side"] == "SELL":
                             #get acc from binance
                             #balance_binance = self.get_balance([self.baseAsset, self.quoteAsset])
                             #self.balance[self.baseAsset]['amt']  = round(float(balance_binance[self.baseAsset]), self.basePrecision)
@@ -202,10 +210,11 @@ class main():
                             quoteAmt = self.balance[self.quoteAsset]['amt'] 
                             totalValue = self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] 
                             msg_line = f'{self.system_name}\r\n SELL {symbol}:{price}\r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}]\r\n baseAmt:{baseAmt}[{baseValue}]\r\n quoteAmt:{quoteAmt}\r\n totalValue:{totalValue}'
-                        
-                        print("############# FILLED ORDER ###############")
+
+                        print('                                                                                                     ',end='\r')
+                        print(' ###################################### FILLED ORDER ###################################### ')
                         print(order)
-                        print("##########################################")
+                        print("")
                         
                         lineSendMas(self.line_token,msg_line)
 
@@ -230,7 +239,7 @@ class main():
         
         res = self.client.place_orders(symbol=sym, side=side, price=price,ordertype='limit', timeInForce='GTC', quantity=quantity)
         print(res)
-        print('###########################################################')
+        print("")
         
         restime = timestampToDatetime( int(res["transactTime"])/1000 )
         
@@ -257,7 +266,7 @@ class main():
                 'order_comment':f'{order_comment}',
                 })
         
-        msg_line = f'{self.system_name} {side} {symbol}:{price} [place order]'
+        msg_line = f'{self.system_name} {side} {symbol}:{price} [ place order ]'
         lineSendMas(self.line_token,msg_line)
         
         save_json(self.openOrder,'openedOrder.json')
@@ -313,7 +322,8 @@ class main():
             if(rebalanceSide != '' and check_minQty and check_minNotional and check_openedOrder):
                 quoteAssetV = self.balance[self.quoteAsset]['value']
                 baseAssetV = self.balance[self.baseAsset]['value']
-                print('#################### place_orders_open ####################')
+                print('                                                                                                     ',end='\r')
+                print(' ####################################### PLACE ORDER ##################################### ')
                 order_comment = f"{self.symbol['symbol']}:{ask} {baseDiff}|{rebalanceQty} [{totalValue}]"
                 self.place_orders_open(self.symbol['symbol'], rebalanceSide, rebalanceQty, order_comment)
                 
@@ -445,12 +455,11 @@ class main():
             self.check_filled_order()    
 
             if self.time_check() :
-
                 #--close order
                 self.cancel_openOrder() 
                  
                 #--rebalance
-                #self.rebalancing()
+                self.rebalancing()
             
             #---echo
             sym = self.portfolioValue['symbol'] 
@@ -463,17 +472,21 @@ class main():
             baseDiffPercent = round((baseDiff/baseAssetRatioValue)*100,2)
             totalValue = self.portfolioValue['totalValue'] 
 
-            print(f'{self.system_name} {sym}:{ask}, {baseAssetAmt}[{baseAssetValue}]:{quoteAssetValue}, {baseDiff}[{baseDiffPercent}%], {totalValue}, {self.time_string}     ',end='\r')
+            print(f'{self.system_name} {sym}:{ask}, {baseAssetAmt}[{baseAssetValue}]:{quoteAssetValue}, {baseDiff}[{baseDiffPercent}%], {totalValue}, {self.time_string}           ',end='\r')
         else:           
-            print(f'{self.system_name} connection failed {self.time_string}                                                                                                       ',end='\r')
+            print(f'{self.system_name} connection failed {self.time_string}                                                                                                         ',end='\r')
 
 
 ################ initialize ################
 program = main()
-print("#################### initialize ####################")
+print(" ####################################### initialize ####################################### ")
 initialize = program.initialize()
-print("###################### Start ######################")
+
 ################ start ################
+print(" ######################################### Start ########################################## ")
+print("")
 while(True):
     program.start()
     time.sleep(0)
+
+
