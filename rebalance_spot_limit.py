@@ -6,8 +6,6 @@ import threading
 #----------
 import configparser
 #----------
-from timeFunction import timeFunction
-#----------
 from ftx import RequestClient_s
 from ftx.utils.timeservice import *
 from system.symbol import *
@@ -16,6 +14,9 @@ from system.manageorder import save_json
 from system.manageorder import write_csv
 from system.utils import lineSendMas
 from system.utils import decimal_nPoint
+from system import timeFunction
+from system import systemCondition
+
 
 
 
@@ -45,6 +46,7 @@ class main():
         self.baseAssetRatio =  float(config['SYSTEM']['baseAssetRatio'])
         self.quoteAssetRatio = 1 - self.baseAssetRatio
         self.portfolioValue = {}
+        
 
         # openOrder load
         self.openOrder = list([])
@@ -75,7 +77,9 @@ class main():
         self.Qtypoint = 0
         self.tickPoint = 0
         self.balance=dict()
-
+        
+        
+        self.system = systemCondition(self.portfolioValue)
     ########################### getdata ###########################   
     def time_check(self):
         #get_time
@@ -135,6 +139,8 @@ class main():
                     print(' ###################################### CANCEL ORDER ###################################### ')
                     print(order)
                     print("")
+                else:
+                    continue
                     
                     
                     
@@ -144,6 +150,7 @@ class main():
         if(len(self.openOrder)>0):
             for order in self.openOrder:
                 delDict = order
+
                 try:
                     _order = self.client.get_order(self.symbol['symbol'],order["orderId"])
                     if float(_order["price"]) == 0 and _order["status"] == "FILLED":
@@ -153,6 +160,7 @@ class main():
                         print("")
                 except:
                     _order={}
+
                 if _order != {}:
                     if _order["status"] == "FILLED" and float(_order["price"]) != 0:
                         msg_line=''
@@ -208,7 +216,7 @@ class main():
                             baseAmt = self.balance[self.baseAsset]['amt'] 
                             baseValue = self.balance[self.baseAsset]['value']
                             quoteAmt = self.balance[self.quoteAsset]['amt'] 
-                            totalValue = round( self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value'] ,self.quotePrecision)
+                            totalValue = round( self.balance[self.baseAsset]['value']  + self.balance[self.quoteAsset]['value']   ,self.quotePrecision)
                             msg_line = f'{self.system_name}\r\n SELL {symbol}:{price}\r\n rebalanceQty:{rebalanceQty}[{cummulativeQuoteQty}]\r\n baseAmt:{baseAmt}[{baseValue}]\r\n quoteAmt:{quoteAmt}\r\n totalValue:{totalValue}'
 
                         print('                                                                                                     ',end='\r')
@@ -482,11 +490,13 @@ program = main()
 print(" ####################################### initialize ####################################### ")
 initialize = program.initialize()
 
-################ start ################
 print(" ######################################### Start ########################################## ")
 print("")
 while(True):
-    program.start()
-    time.sleep(0)
-
-
+    
+    while(program.system.control()):
+        program.start()
+        time.sleep(0)
+    
+    print(f'System stop [critical point]                                                                                                         ',end='\r')
+    time.sleep(1)
