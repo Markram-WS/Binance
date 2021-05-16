@@ -6,14 +6,13 @@ import threading
 #----------
 import configparser
 #----------
-from ftx import RequestClient_s
-from ftx.utils.timeservice import *
+from binance import RequestClient_s
+from binance.utils.timeservice import *
 from system.symbol import *
 from system.manageorder import load_json
 from system.manageorder import save_json
 from system.manageorder import write_csv
 from system.utils import lineSendMas
-from system.utils import checkIn
 from system.utils import decimal_nPoint
 from system import timeFunction
 from system import systemCondition
@@ -90,7 +89,7 @@ class main():
         if getattr(self.tm,self.interval) != self.time_store_value :
             self.time_store_value = getattr(self.tm,self.interval)
             #time checkIn
-            checkIn(self.system_name)
+            self.timeFunction.checkIn(self.system_name)
             #####################
             #time function
             if self.timeFunction.time_condition():
@@ -470,7 +469,7 @@ class main():
                 self.cancel_openOrder() 
                  
                 #--rebalance
-                self.rebalancing()
+                #self.rebalancing()
             
             #---echo
             sym = self.portfolioValue['symbol'] 

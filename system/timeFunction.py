@@ -1,6 +1,6 @@
 import time
 import configparser
-from utils import lineSendMas
+from system.utils import lineSendMas
 class timeFunction():
     def __init__(self):
         config = configparser.ConfigParser()
@@ -16,7 +16,7 @@ class timeFunction():
 
     def checkIn(self,system_name):
         if self.tm.tm_min == 0 :
-            msg = f'{system_name} --checkIn--'
+            msg = f'{system_name} status[OK]'
             lineSendMas(self.token,msg)
 
     def time_condition(self):
