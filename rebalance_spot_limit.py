@@ -13,6 +13,7 @@ from system.manageorder import load_json
 from system.manageorder import save_json
 from system.manageorder import write_csv
 from system.utils import lineSendMas
+from system.utils import checkIn
 from system.utils import decimal_nPoint
 from system import timeFunction
 from system import systemCondition
@@ -88,8 +89,10 @@ class main():
         
         if getattr(self.tm,self.interval) != self.time_store_value :
             self.time_store_value = getattr(self.tm,self.interval)
-            #time function
+            #time checkIn
+            checkIn(self.system_name)
             #####################
+            #time function
             if self.timeFunction.time_condition():
                 return True
             #####################

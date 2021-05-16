@@ -1,4 +1,5 @@
 import requests
+
 ########################### order #############################
 def cal_size(size,price,pricePrecision):
     return  f'{round(size/price,pricePrecision)}'
